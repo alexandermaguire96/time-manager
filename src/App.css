@@ -1,0 +1,243 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+.dark-mode-button {
+  position: fixed;      /* stays in the corner */
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;   /* makes it circular */
+  border: none;
+  background-color: #444; /* dark button for light mode */
+  color: #fff;
+  font-size: 20px;       /* make the icon visible */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 1000;
+  transition: background-color 0.3s, transform 0.2s;
+}
+.task-box {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin-bottom: 10px;
+  height: 50px;
+  width: 600px;
+  cursor: grab;
+  transition: all 0.1s ease;
+  user-select: none; /* Add this line to prevent text selection */
+  -webkit-user-select: none; /* For Safari */
+  -moz-user-select: none; /* For Firefox */
+  -ms-user-select: none; /* For IE/Edge */
+}
+
+.task-box:active {
+  cursor: grabbing;
+}
+
+.app.dark .task-box{
+  background-color: #222;
+  border-color: #555;
+  color: #f5f5f5;
+}
+.dark-mode-button:hover {
+  transform: scale(1.1);  /* subtle hover effect */
+}
+
+.app.dark .dark-mode-button {
+  background-color: #ddd;  /* lighter button in dark mode */
+  color: #222;
+}
+
+.app.light {
+  background-color: #f5f5f5;
+  color: #222;
+}
+
+.app.dark {
+  background-color: #121212;
+  color: #f5f5f5;
+}
+
+
+.app.dark input {
+  background-color: #222;
+  color: #f5f5f5;
+  border: 1px solid #555;
+}
+
+.app.dark button[type="submit"] {
+  background-color: #555;
+  color: #f5f5f5;
+}
+
+.app-content {
+  padding: 20px;
+}
+
+.app-header {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0px 32px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  background-color: inherit;
+  z-index: 1000;
+}
+
+.app-content {
+  padding: 20px;
+}
+
+.button {
+  
+  margin-left: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #888;
+  color: #fff;
+  transition: background-color 0.2s;
+}
+
+.button:hover:enabled {
+  background-color: #666;
+}
+
+.button:disabled {
+  background-color: #ccc;  /* style for disabled button */
+  cursor: not-allowed;
+}
+
+.app.dark .button:hover:enabled {
+  background-color: #666;
+}
+
+.app.dark .button:disabled {
+  cursor: not-allowed;
+  background-color: #222;
+}
+
+.task-button {
+  margin-left: 12px;
+  margin-bottom: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.app.dark .task-button{
+  background-color: #444;
+}
+
+.app.dark .task-button:hover{
+  background-color: #888;
+}
+.task-button:hover {
+  background-color: #888;
+}
+
+.remove-button {
+  background-color: #e53e3e !important;
+  color: white !important;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0;
+}
+
+.remove-button:hover {
+  background-color: #c53030 !important;
+  transform: scale(1.05);
+}
+
+.app.dark .remove-button {
+  background-color: #e53e3e !important;
+}
+
+.app.dark .remove-button:hover {
+  background-color: #c53030 !important;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+form {
+  display: flex;        /* make input and button horizontal */
+  gap: 10px;            /* space between input and button */
+  justify-content: center; /* center the form if you like */
+  margin-bottom: 20px;  /* optional spacing from the task list */
+}
+
+form input {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  flex: 1;              /* input expands to fill space */
+  min-width: 200px;     /* optional minimum size */
+}
+
+form button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
