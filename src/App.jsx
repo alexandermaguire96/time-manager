@@ -194,10 +194,12 @@ function App() {
         if (task.running && task.timeLeft > 0) {
           const newTimeLeft = task.timeLeft - 1;
           
+          const isCompleted = newTimeLeft === 0;
+
           if (newTimeLeft === 0 && autoPlay) {
             shouldStartNextTask = true;
           }
-          return { ...task, timeLeft: newTimeLeft};
+          return { ...task, timeLeft: newTimeLeft, completed: isCompleted};
         }
         return task;
       });
@@ -230,7 +232,6 @@ function App() {
   return () => clearInterval(intervalId);
   }, [autoPlay]);
 
-
   function addTask() { 
     const trimmedTask = task.trim();
     const numMinutes = Number(minutes);
@@ -245,6 +246,7 @@ function App() {
       minutes: numMinutes,
       timeLeft: numMinutes * 60,
       running: false,
+      completed: false,
       mode: "countdown",
     };
 
@@ -356,6 +358,7 @@ function App() {
               onChange={(e) => setMinutes(e.target.value)}
               placeholder="Minutes"
               min="1"
+              max="1440"
             />
             <button 
               ref = {addButtonRef}
