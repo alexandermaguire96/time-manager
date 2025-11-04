@@ -232,11 +232,6 @@ function App() {
   return () => clearInterval(intervalId);
   }, [autoPlay, tasks]);
 
-  //local storage for tasks
-  useEffect(() => {
-    console.log("Saving to localStorage: ", tasks);
-    localStorage.setItem('tasks', JSON.stringify(tasks));
-  }, [tasks]);
 
   useEffect(() => {
     try {
@@ -299,6 +294,12 @@ function App() {
     setMinutes("");
     taskInputRef.current?.focus();
   }
+
+  //local storage for tasks
+  useEffect(() => {
+    console.log("Saving to localStorage: ", tasks);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   function removeTask(id) {
    setTasks(prev => prev.filter(t => t.id !== id));
