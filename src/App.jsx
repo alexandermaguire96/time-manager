@@ -184,27 +184,29 @@ function App() {
   useEffect(() => {
   const intervalId = setInterval(() => {
     setTasks(prevTasks => {
-      // Check if there are any running tasks that need updating
-      const hasRunningTasks = prevTasks.some(task => task.running && task.timeLeft > 0);
-      
-      if (!hasRunningTasks) return prevTasks;
+      // return early if no tasks running
+      if (!prevTasks.some(task => task.running && task.timeLeft > 0)) {
+        return prevTasks;
+      }
       
       let shouldStartNextTask = false;
+
       const updatedTasks = prevTasks.map(task => {
         if (task.running && task.timeLeft > 0) {
           const newTimeLeft = task.timeLeft - 1;
-          
-          if (newTimeLeft === 0 && autoPlay) {
+          const isCompleted = newTimeLeft === 0;
+
+          if (isCompleted && autoPlay) {
             shouldStartNextTask = true;
           }
-          return { ...task, timeLeft: newTimeLeft};
+          return { ...task, timeLeft: newTimeLeft, completed: isCompleted};
         }
         return task;
       });
 
       // Handle autoplay separately to avoid complexity
       if (shouldStartNextTask && autoPlay) {
-          const currentRunningIndex = updatedTasks.findIndex(t => t.running && t.timeLeft === 0);
+          const currentRunningIndex = prevTasks.findIndex(t => t.running && t.timeLeft === 1);
           if (currentRunningIndex !== -1) {
             // Stop the completed task
             updatedTasks[currentRunningIndex] = {
@@ -228,8 +230,39 @@ function App() {
   }, 1000);
   
   return () => clearInterval(intervalId);
-  }, [autoPlay]);
+  }, [autoPlay, tasks]);
 
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('tasks'));
+      console.log("Loaded from localStorage:", saved);
+
+      if (Array.isArray(saved) && saved.length > 0) {
+        // Ensure every task has required properties
+        const validated = saved.map(t => ({
+          id: t.id,
+          name: t.name || "Unnamed Task",
+          minutes: t.minutes || 1,
+          timeLeft: t.timeLeft !== undefined ? t.timeLeft : (t.minutes || 1) * 60,
+          running: false,
+          completed: t.completed || false,
+          mode: t.mode || "countdown",
+        }));
+        setTasks(validated);
+        console.log("Validated tasks: ", validated);
+      }
+    } catch (e) {
+        console.error("Failed to load saved tasks:", e);
+        localStorage.removeItem('tasks');
+      }
+    }, []);
+
+
+  //wanna make sure tasks are actually being loaded
+  useEffect(() => {
+    console.log("Tasks after loading or update:", tasks, "Length:", tasks.length);
+  }, [tasks]);
 
   function addTask() { 
     const trimmedTask = task.trim();
@@ -245,6 +278,7 @@ function App() {
       minutes: numMinutes,
       timeLeft: numMinutes * 60,
       running: false,
+      completed: false,
       mode: "countdown",
     };
 
@@ -260,6 +294,12 @@ function App() {
     setMinutes("");
     taskInputRef.current?.focus();
   }
+
+  //local storage for tasks
+  useEffect(() => {
+    console.log("Saving to localStorage: ", tasks);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   function removeTask(id) {
    setTasks(prev => prev.filter(t => t.id !== id));
@@ -356,6 +396,7 @@ function App() {
               onChange={(e) => setMinutes(e.target.value)}
               placeholder="Minutes"
               min="1"
+              max="1440"
             />
             <button 
               ref = {addButtonRef}
