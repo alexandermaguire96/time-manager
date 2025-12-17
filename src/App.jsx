@@ -244,7 +244,7 @@ function App() {
           id: t.id,
           name: t.name || "Unnamed Task",
           minutes: t.minutes || 1,
-          timeLeft: t.timeLeft !== undefined ? t.timeLeft : (t.minutes || 1) * 60,
+          timeLeft: t.timeLeft !== undefined ? t.timeLeft : ((t.minutes !== undefined && t.minutes !== "") ? t.minutes : 60),
           running: false,
           completed: t.completed || false,
           mode: t.mode || "countdown",
@@ -266,11 +266,16 @@ function App() {
 
   function addTask() { 
     const trimmedTask = task.trim();
-    const numMinutes = Number(minutes);
+    let numMinutes = Number(minutes);
+
+    // Default to 60 if minutes is empty, zero, or invalid
+    if (!numMinutes || numMinutes <= 0 || isNaN(numMinutes)) {
+      numMinutes = 60;
+    }
 
     console.log("addTask called with:", {trimmedTask, numMinutes}); //debug
     
-    if (!trimmedTask || numMinutes <= 0 || isNaN(numMinutes)) return;
+    if (!trimmedTask) return;
     
     const newTask = {
       id: Date.now(),
@@ -344,16 +349,21 @@ function App() {
       <div className={darkMode ? "app dark" : "app light"}>
       
         <header className="app-header">
-          <h1>⏳ Time Manager</h1>
+          <h1>⏳ Study Session</h1>
         </header>
 
+        
         <button 
           className="dark-mode-button"
           onClick={() => setDarkMode(!darkMode)}
         >
           {darkMode ? "☀️" : "🌙"}
         </button>
-
+        <button
+          className="pomadoro-button"
+        >
+          Pomadoro
+        </button>
         <button 
           className="button"
           onClick={toggleAutoPlay}
@@ -394,7 +404,7 @@ function App() {
               type="number"
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
-              placeholder="Minutes"
+              placeholder="EST Time"
               min="1"
               max="1440"
             />
@@ -402,7 +412,7 @@ function App() {
               ref = {addButtonRef}
               type="submit"
               className="button"
-              disabled={!task.trim() || Number(minutes) <= 0 || isNaN(Number(minutes))}
+              disabled={!task.trim()}
             >
               Add Task
             </button>
