@@ -123,6 +123,7 @@ function App() {
   const [minutes, setMinutes] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [autoPlay, setAutoplay] = useState(false);
+  const [pomadoro, setIsOpen] = useState(false)
   const taskInputRef = useRef(null);
   const minutesInputRef = useRef(null);
   const addButtonRef = useRef(null);
@@ -328,6 +329,36 @@ function App() {
     setAutoplay(!autoPlay);
   }
 
+  function pomodoroModal({isOpen, onClose, children}) {
+    if (!isOpen) return null;
+    
+    return(
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1001
+      }} onClick={onClose}>
+        <div style={{
+          background: 'white',
+          padding: '20px',
+          borderRadius: '8px',
+          minWidth: '300px',
+          maxWidth: '500px'
+        }} onClick={(e) => e.stopPropagation()}>
+          {children}
+        </div>
+      </div>
+
+    );
+  }
+
 
   function resetTask(id){
     setTasks(prev =>
@@ -361,7 +392,8 @@ function App() {
         </button>
         <button
           className="pomadoro-button"
-        >
+          onClick={() => setIsOpen(!isOpen)}
+        > 
           Pomadoro
         </button>
         <button 
