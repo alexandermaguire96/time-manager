@@ -23,6 +23,34 @@
   z-index: 1000;
   transition: background-color 0.3s, transform 0.2s;
 }
+.pomadoro-button {
+  position: fixed;      /* stays in the corner */
+  top: 16px;
+  right: 72px;          /* 40px (button width) + 16px (spacing) + 16px (more spacing) */
+  width: auto;          /* Let it expand for text */
+  min-width: 100px;     /* Minimum width for the text */
+  height: 40px;
+  border-radius: 20px;  /* Half of height for pill shape */
+  border: none;
+  background-color: #444; /* Same as dark mode button */
+  color: #fff;
+  font-size: 14px;      /* Adjusted for text */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;      /* Horizontal padding for text */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  z-index: 1000;
+  transition: background-color 0.3s, transform 0.2s;
+}
+.pomadoro-button:hover {
+  transform: scale(1.05);  /* subtle hover effect */
+}
+.app.dark .pomadoro-button {
+  background-color: #ddd;  /* lighter button in dark mode - matches dark mode button */
+  color: #222;
+}
 .task-box {
   background-color: #f0f0f0;
   border: 1px solid #ccc;
