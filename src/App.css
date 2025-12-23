@@ -23,7 +23,7 @@
   z-index: 1000;
   transition: background-color 0.3s, transform 0.2s;
 }
-.pomadoro-button {
+.pomodoro-button {
   position: fixed;      /* stays in the corner */
   top: 16px;
   right: 72px;          /* 40px (button width) + 16px (spacing) + 16px (more spacing) */
@@ -44,10 +44,10 @@
   z-index: 1000;
   transition: background-color 0.3s, transform 0.2s;
 }
-.pomadoro-button:hover {
+.pomodoro-button:hover {
   transform: scale(1.05);  /* subtle hover effect */
 }
-.app.dark .pomadoro-button {
+.app.dark .pomodoro-button {
   background-color: #ddd;  /* lighter button in dark mode - matches dark mode button */
   color: #222;
 }

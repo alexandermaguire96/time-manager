@@ -99,31 +99,117 @@ function SortableTask({task, onToggleRunning, onReset, onRemove}) {
   );
 }
 
-
 function formatTime(seconds) {
-    const totalMinutes = Math.floor(seconds/60);
-    if (totalMinutes >= 60) {
-      const hours = Math.floor(totalMinutes/60);
-      const minutes = totalMinutes % 60;
-      const remainingSeconds = seconds % 60;
+  const totalMinutes = Math.floor(seconds/60);
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes/60);
+    const minutes = totalMinutes % 60;
+    const remainingSeconds = seconds % 60;
 
-      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2,"0")}`; 
-      
-    } else {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-    }
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2,"0")}`; 
     
+  } else {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }
   
+}
+
+function PomodoroModal({isOpen, onClose, onAddPomodoro, taskCount}) {
+
+  const [workMinutes, setWorkMinutes] = useState(45);
+  const [breakMinutes, setBreakMinutes] = useState(15);
+
+  if (!isOpen) return null;
+
+  const overlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1001
+  };
+
+  const modalStyle = {
+    background: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    minWidth: '300px',
+    maxWidth: '500px',
+    color: 'black'
+  };
+
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+        <h2>🍅 Pomodoro Timer</h2>
+        <p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
+          This will convert your {taskCount} existing task{taskCount !== 1 ? 's' : ''} into Pomodoro blocks.
+        </p>
+
+        <div style={{ margin: '20px 0' }}>
+          <label style={{ display: 'block', marginBottom: '10px' }}>
+            Work Duration (minutes):
+            <input
+              type="number"
+              value={workMinutes}
+              onChange={(e) => setWorkMinutes(Number(e.target.value))}
+              min="1"
+              max="60"
+              style={{ marginLeft: '10px', padding: '5px' }}
+            />
+          </label>
+          <label style={{ display: 'block', marginBottom: '20px' }}>
+            Break Duration (minutes):
+            <input
+              type="number"
+              value={breakMinutes}
+              onChange={(e) => setBreakMinutes(Number(e.target.value))}
+              min="1"
+              max="30"
+              style={{ marginLeft: '10px', padding: '5px' }}
+            />
+          </label>
+        </div>
+
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+            Cancel
+          </button>
+          <button 
+            onClick={() => {
+              if (onAddPomodoro) onAddPomodoro(workMinutes, breakMinutes);
+              onClose();
+            }}
+            style={{ 
+              padding: '8px 16px', 
+              background: '#4CAF50', 
+              color: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            Add Pomodoro
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [task, setTask] = useState(""); 
   const [tasks, setTasks] = useState([]); 
   const [minutes, setMinutes] = useState("");
   const [darkMode, setDarkMode] = useState(false);
   const [autoPlay, setAutoplay] = useState(false);
-  const [pomadoro, setIsOpen] = useState(false)
+  const [pomodoroOpen, setPomodoroOpen] = useState(false)
   const taskInputRef = useRef(null);
   const minutesInputRef = useRef(null);
   const addButtonRef = useRef(null);
@@ -329,36 +415,6 @@ function App() {
     setAutoplay(!autoPlay);
   }
 
-  function pomodoroModal({isOpen, onClose, children}) {
-    if (!isOpen) return null;
-    
-    return(
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1001
-      }} onClick={onClose}>
-        <div style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          minWidth: '300px',
-          maxWidth: '500px'
-        }} onClick={(e) => e.stopPropagation()}>
-          {children}
-        </div>
-      </div>
-
-    );
-  }
-
 
   function resetTask(id){
     setTasks(prev =>
@@ -373,6 +429,77 @@ function App() {
         running:false
     }))
     setTasks(updatedTasks);
+  }
+
+  function clearAllTasks() {
+    if (window.confirm("Are you sure you want to clear ALL tasks? This cannot be undone.")) {
+      setTasks([]);
+      localStorage.removeItem('tasks'); // Also clear from localStorage
+    }
+  }
+
+  function handleAddPomodoro(workMinutes, breakMinutes) {
+    setTasks(prevTasks => {
+      const newTasks = [];
+      
+      prevTasks.forEach((task, index) => {
+        const totalTaskMinutes = task.minutes;
+        let remainingMinutes = totalTaskMinutes;
+        let sessionCount = 0;
+        
+        // Split the task into work-break cycles
+        while (remainingMinutes > 0) {
+          sessionCount++;
+          
+          // Add work session
+          const workSessionMinutes = Math.min(workMinutes, remainingMinutes);
+          newTasks.push({
+            ...task,
+            id: Date.now() + index * 1000 + sessionCount * 2,
+            name: `${task.name} - Part ${sessionCount} (🍅 ${workSessionMinutes}min)`,
+            minutes: workSessionMinutes,
+            timeLeft: workSessionMinutes * 60,
+            running: false,
+            completed: false,
+            originalName: task.name,
+            isPomodoroWork: true,
+            partNumber: sessionCount,
+            totalParts: Math.ceil(totalTaskMinutes / workMinutes)
+          });
+          
+          remainingMinutes -= workSessionMinutes;
+          
+          // Add break if there's more work remaining
+          if (remainingMinutes > 0) {
+            newTasks.push({
+              id: Date.now() + index * 1000 + sessionCount * 2 + 1,
+              name: `☕ Break ${sessionCount} (${breakMinutes}min)`,
+              minutes: breakMinutes,
+              timeLeft: breakMinutes * 60,
+              running: false,
+              completed: false,
+              isPomodoroBreak: true,
+              breakNumber: sessionCount
+            });
+          }
+        }
+        
+        // Add a break after the entire task (if not the last task)
+        if (index < prevTasks.length - 1) {
+          newTasks.push({
+            id: Date.now() + index * 1000 + 9999,
+            name: `☕ Task Break (${breakMinutes}min)`,
+            minutes: breakMinutes,
+            timeLeft: breakMinutes * 60,
+            running: false,
+            completed: false,
+            isPomodoroTaskBreak: true
+          });
+        }
+      });
+      
+      return newTasks;
+    });
   }
 
   return (
@@ -391,10 +518,10 @@ function App() {
           {darkMode ? "☀️" : "🌙"}
         </button>
         <button
-          className="pomadoro-button"
-          onClick={() => setIsOpen(!isOpen)}
+          className="pomodoro-button"
+          onClick={() => setPomodoroOpen(true)}
         > 
-          Pomadoro
+          Pomodoro
         </button>
         <button 
           className="button"
@@ -410,6 +537,13 @@ function App() {
         Reset All
         </button>
 
+        <button
+          className = "button"
+          onClick={clearAllTasks}
+          disabled={tasks.length === 0}
+        >
+          Clear All
+        </button>
         <main className="app-content">
           <form
             onSubmit={(e) => {
@@ -476,6 +610,12 @@ function App() {
             </SortableContext>
           </DndContext>
         </main>
+        <PomodoroModal
+          isOpen={pomodoroOpen} 
+          onClose={() => setPomodoroOpen(false)}
+          onAddPomodoro={handleAddPomodoro}
+          taskCount={tasks.length}
+        />
       </div>
     </ErrorBoundary>
   );
