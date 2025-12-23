@@ -360,7 +360,12 @@ function App() {
       numMinutes = 60;
     }
 
-    console.log("addTask called with:", {trimmedTask, numMinutes}); //debug
+    //If number of minutes 12 or less than add a task with hours instead of minutes
+    else if (numMinutes >= 1 && numMinutes <= 12) {
+      numMinutes = numMinutes * 60;
+    }
+
+    console.log("addTask called with:", {trimmedTask, numMinutes, originalInput:minutes}); //debug
     
     if (!trimmedTask) return;
     
@@ -435,7 +440,7 @@ function App() {
     if (window.confirm("Are you sure you want to clear ALL tasks? This cannot be undone.")) {
       setTasks([]);
       localStorage.removeItem('tasks'); // Also clear from localStorage
-    }
+    } 
   }
 
   function handleAddPomodoro(workMinutes, breakMinutes) {
@@ -570,7 +575,7 @@ function App() {
               type="number"
               value={minutes}
               onChange={(e) => setMinutes(e.target.value)}
-              placeholder="EST Time"
+              placeholder="EST Time (1-12 hours)"
               min="1"
               max="1440"
             />
