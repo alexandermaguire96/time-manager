@@ -38,7 +38,7 @@ const ErrorBoundary = ({ children }) => {
 };
 
 // SortableTask component
-function SortableTask({task, onToggleRunning, onReset, onRemove}) {
+function SortableTask({task, onToggleRunning, onReset, onRemove, darkMode}) {
   const {
     attributes,
     listeners,
@@ -54,18 +54,34 @@ function SortableTask({task, onToggleRunning, onReset, onRemove}) {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // compute smooth progress for the task's loading bar
+  const totalMs = (task.minutes || 0) * 60 * 1000;
+  const pausedMs = task.pausedElapsedMs || 0;
+  const runningMs = task.running && task.startedAt ? Date.now() - task.startedAt : 0;
+  const elapsedMs = Math.min(pausedMs + runningMs, totalMs || 0);
+  const progress = totalMs > 0 ? Math.min(elapsedMs / totalMs, 1) : 0;
+
+  // Visual fill for the whole task element
+  const pct = Math.round(progress * 100);
+  const fillColor = task.completed ? '#2f855a' : '#4CAF50';
+  const baseBg = darkMode ? '#222' : '#f0f0f0';
+  const background = `linear-gradient(90deg, ${fillColor} ${pct}%, ${baseBg} ${pct}%)`;
+
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, background }}
       {...attributes}
       className="task-box"
     >
-      <div {...listeners} style={{ cursor: 'grab', flex: 1}}>
-        <strong>{task.name}</strong> ... {formatTime(task.timeLeft)}
+      <div {...listeners} style={{ cursor: 'grab', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px'}}>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <strong>{task.name}</strong>
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTime(task.timeLeft)}</span>
+        </div>
       </div>
-      
-      <div style={{display: 'flex', gap:'8px'}}>
+
+      <div style={{display: 'flex', gap:'8px', marginLeft: '12px'}}>
         <button
           className="task-button"
           onClick={(e) => {
@@ -213,6 +229,8 @@ function App() {
   const taskInputRef = useRef(null);
   const minutesInputRef = useRef(null);
   const addButtonRef = useRef(null);
+  const [tick, setTick] = useState(0);
+  const rafRef = useRef(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -275,44 +293,38 @@ function App() {
       if (!prevTasks.some(task => task.running && task.timeLeft > 0)) {
         return prevTasks;
       }
-      
+
       let shouldStartNextTask = false;
+      let completedIndex = -1;
 
-      const updatedTasks = prevTasks.map(task => {
-        if (task.running && task.timeLeft > 0) {
-          const newTimeLeft = task.timeLeft - 1;
-          const isCompleted = newTimeLeft === 0;
+      const updatedTasks = prevTasks.map((task, idx) => {
+        const totalSeconds = (task.minutes || 0) * 60;
+        const pausedMs = task.pausedElapsedMs || 0;
+        const runningMs = task.running && task.startedAt ? Date.now() - task.startedAt : 0;
+        const elapsedSec = Math.floor((pausedMs + runningMs) / 1000);
+        const newTimeLeft = Math.max(totalSeconds - elapsedSec, 0);
+        const isCompleted = newTimeLeft === 0;
 
-          if (isCompleted && autoPlay) {
-            shouldStartNextTask = true;
-          }
-          return { ...task, timeLeft: newTimeLeft, completed: isCompleted};
+        if (isCompleted && task.running) {
+          shouldStartNextTask = autoPlay;
+          completedIndex = idx;
         }
-        return task;
+
+        return { ...task, timeLeft: newTimeLeft, completed: isCompleted };
       });
 
-      // Handle autoplay separately to avoid complexity
-      if (shouldStartNextTask && autoPlay) {
-          const currentRunningIndex = prevTasks.findIndex(t => t.running && t.timeLeft === 1);
-          if (currentRunningIndex !== -1) {
-            // Stop the completed task
-            updatedTasks[currentRunningIndex] = {
-              ...updatedTasks[currentRunningIndex],
-              running: false
-            };
-            
-            // Start the next available task
-            const nextTaskIndex = currentRunningIndex + 1;
-            if (nextTaskIndex < updatedTasks.length && updatedTasks[nextTaskIndex].timeLeft > 0) {
-              updatedTasks[nextTaskIndex] = {
-                ...updatedTasks[nextTaskIndex],
-                running: true
-              };
-            }
-          }
+      // Handle autoplay: stop completed task and start next
+      if (shouldStartNextTask && autoPlay && completedIndex !== -1) {
+        if (updatedTasks[completedIndex]) {
+          updatedTasks[completedIndex] = { ...updatedTasks[completedIndex], running: false };
         }
+        const nextTaskIndex = completedIndex + 1;
+        if (nextTaskIndex < updatedTasks.length && updatedTasks[nextTaskIndex].timeLeft > 0) {
+          updatedTasks[nextTaskIndex] = { ...updatedTasks[nextTaskIndex], running: true, startedAt: Date.now() };
+        }
+      }
 
-        return updatedTasks;
+      return updatedTasks;
     });
   }, 1000);
   
@@ -334,6 +346,9 @@ function App() {
           timeLeft: t.timeLeft !== undefined ? t.timeLeft : ((t.minutes !== undefined && t.minutes !== "") ? t.minutes : 60),
           running: false,
           completed: t.completed || false,
+          // derive pausedElapsedMs from saved timeLeft so progress can resume
+          pausedElapsedMs: ((t.minutes || 0) * 60 - (t.timeLeft !== undefined ? t.timeLeft : (t.minutes || 0))) * 1000,
+          startedAt: null,
           mode: t.mode || "countdown",
         }));
         setTasks(validated);
@@ -350,6 +365,57 @@ function App() {
   useEffect(() => {
     console.log("Tasks after loading or update:", tasks, "Length:", tasks.length);
   }, [tasks]);
+
+  // RAF-driven tick for smooth progress updates; start only when any task is running
+  useEffect(() => {
+    const anyRunning = tasks.some(t => t.running);
+    if (!anyRunning) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      return;
+    }
+
+    const loop = () => {
+      setTick(Date.now());
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [tasks.some(t => t.running)]);
+
+  // On each animation tick, check for completion (may occur between seconds)
+  useEffect(() => {
+    if (!tick) return;
+
+    setTasks(prev => {
+      let changed = false;
+      const now = Date.now();
+      const updated = prev.map(t => {
+        if (t.completed) return t;
+        const totalMs = (t.minutes || 0) * 60 * 1000;
+        const elapsedMs = (t.pausedElapsedMs || 0) + (t.running && t.startedAt ? now - t.startedAt : 0);
+        if (totalMs > 0 && elapsedMs >= totalMs) {
+          changed = true;
+          return {
+            ...t,
+            completed: true,
+            running: false,
+            timeLeft: 0,
+            pausedElapsedMs: totalMs,
+            startedAt: null
+          };
+        }
+        return t;
+      });
+      return changed ? updated : prev;
+    });
+  }, [tick]);
 
   function addTask() { 
     const trimmedTask = task.trim();
@@ -376,6 +442,8 @@ function App() {
       timeLeft: numMinutes * 60,
       running: false,
       completed: false,
+      pausedElapsedMs: 0,
+      startedAt: null,
       mode: "countdown",
     };
 
@@ -405,13 +473,33 @@ function App() {
   function toggleRunning(id) {
     setTasks(prev =>
       prev.map(t => {
-        if (t.id === id) {
-          return { ...t, running: !t.running };
-        } 
-        if (autoPlay && !t.running) {
-          return {...t, running:false};
+        if (t.id !== id) return t;
+
+        // If task already completed, reset and start fresh
+        if (t.completed) {
+          return {
+            ...t,
+            running: true,
+            completed: false,
+            timeLeft: t.minutes * 60,
+            pausedElapsedMs: 0,
+            startedAt: Date.now()
+          };
         }
-        return t;
+
+        // Toggle running/paused
+        if (!t.running) {
+          return { ...t, running: true, startedAt: Date.now() };
+        } else {
+          const now = Date.now();
+          const added = t.startedAt ? (now - t.startedAt) : 0;
+          return {
+            ...t,
+            running: false,
+            pausedElapsedMs: (t.pausedElapsedMs || 0) + added,
+            startedAt: null
+          };
+        }
       })
     );
   }
@@ -423,7 +511,7 @@ function App() {
 
   function resetTask(id){
     setTasks(prev =>
-      prev.map(t => t.id === id ? { ...t, timeLeft: t.minutes * 60, running: false} : t)
+      prev.map(t => t.id === id ? { ...t, timeLeft: t.minutes * 60, running: false, pausedElapsedMs: 0, startedAt: null, completed: false } : t)
     );
   }
 
@@ -431,7 +519,10 @@ function App() {
     const updatedTasks = tasks.map(task => ({
       ...task,
         timeLeft: task.minutes * 60,
-        running:false
+        running:false,
+        pausedElapsedMs: 0,
+        startedAt: null,
+        completed: false
     }))
     setTasks(updatedTasks);
   }
@@ -609,6 +700,7 @@ function App() {
                     onToggleRunning={toggleRunning}
                     onReset={resetTask}
                     onRemove={removeTask}
+                    darkMode={darkMode}
                   />
                 ))}
               </div>
